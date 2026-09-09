@@ -2,7 +2,7 @@
 param(
     [string]$HostName,
     [string]$UserName,
-    [string]$VpnName = 'lab',
+    [string]$VpnName,
     [string]$Alias = 'work',
     [int]$Port = 10137,
     [string]$InstallDir = (Join-Path $env:LOCALAPPDATA 'Programs\lab-vpn-connect'),
@@ -17,7 +17,9 @@ if ($HostName -notmatch '^([0-9]{1,3}\.){3}[0-9]{1,3}$') { throw 'Use a numeric 
 $parsedHost = $null
 if (-not [Net.IPAddress]::TryParse($HostName, [ref]$parsedHost)) { throw 'Invalid IPv4 address.' }
 if ($Port -lt 1 -or $Port -gt 65535) { throw 'Port must be 1-65535.' }
-if (-not $VpnName -or $VpnName -match '["%\r\n&|<>^]') { throw 'VPN name contains unsupported shell characters.' }
+if ($PSBoundParameters.ContainsKey('VpnName') -and [string]::IsNullOrWhiteSpace($VpnName)) { throw 'VPN name must not be empty if specified.' }
+if ($VpnName -match '["%\r\n&|<>^]') { throw 'VPN name contains unsupported shell characters.' }
+$interfaceOption = if ($VpnName) { ' --interface "' + $VpnName + '"' } else { '' }
 $sourceExe = Join-Path $PSScriptRoot 'lab-vpn-connect.exe'
 if (-not (Test-Path -LiteralPath $sourceExe)) { $sourceExe = Join-Path $PSScriptRoot 'artifacts\lab-vpn-connect.exe' }
 if (-not (Test-Path -LiteralPath $sourceExe)) { throw 'Executable missing. Extract the entire release ZIP, or run build.ps1 first.' }
@@ -40,7 +42,7 @@ Host $Alias
     HostName $HostName
     Port $Port
     User $UserName
-    ProxyCommand "$sshExePath" --interface "$VpnName" --host %h --port %p
+    ProxyCommand "$sshExePath" --host %h --port %p$interfaceOption
 Host *
 $end
 "@
@@ -61,5 +63,6 @@ if ($oldConfig -ne $newConfig) {
 }
 Write-Host ('Installed: ' + $targetExe)
 Write-Host ('SSH config: ' + $ConfigPath)
-Write-Host ('Connect VPN "' + $VpnName + '", then run: ssh ' + $Alias)
+if ($VpnName) { Write-Host ('Connect VPN "' + $VpnName + '", then run: ssh ' + $Alias) }
+else { Write-Host ('Connect the VPN with server IP ' + $HostName + ', then run: ssh ' + $Alias + '. Its name does not matter.') }
 Write-Host 'You may delete the extracted installer folder. Keep the installed executable and SSH config.'

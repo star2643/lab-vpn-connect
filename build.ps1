@@ -8,7 +8,7 @@ if (-not (Test-Path -LiteralPath $compiler)) {
 if (-not (Test-Path -LiteralPath $compiler)) { throw '.NET Framework C# compiler not found.' }
 $outDir = Join-Path $PSScriptRoot 'artifacts'
 [void][IO.Directory]::CreateDirectory($outDir)
-$source = Join-Path $PSScriptRoot 'src\Program.cs'
+$source = @(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'src') -Filter '*.cs' | Sort-Object Name | Select-Object -ExpandProperty FullName)
 & $compiler /nologo /target:exe /platform:anycpu /optimize+ /warnaserror+ ('/out:' + (Join-Path $outDir 'lab-vpn-connect.exe')) $source
 if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 & $compiler /nologo /target:exe /platform:anycpu /optimize+ /warnaserror+ /main:LabVpnConnect.Tests ('/out:' + (Join-Path $outDir 'tests.exe')) $source (Join-Path $PSScriptRoot 'tests\Tests.cs')

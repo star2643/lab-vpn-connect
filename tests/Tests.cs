@@ -36,10 +36,29 @@ namespace LabVpnConnect
                 Test("strict arguments and literal IPv4", () => {
                     Options o = Options.Parse(new[] { "--interface", "Lab VPN", "--host", "203.0.113.10", "--port", "10137" });
                     Assert(o.Port == 10137 && o.InterfaceName == "Lab VPN", "Argument parsing");
+                    Options auto = Options.Parse(new[] { "--host", "203.0.113.10", "--port", "10137" });
+                    Assert(auto.InterfaceName == null, "Automatic discovery must be the default.");
+                    Reject(() => Options.Parse(new[] { "--interface", " ", "--host", "203.0.113.10", "--port", "10137" }));
                     foreach (string bad in new[] { "example.com", "127.1", "0x7f.0.0.1", "1.2.3.999", "1.2.3.-1", "::1" })
                         Reject(() => Options.ParseIPv4(bad));
                     Reject(() => Options.Parse(new[] { "--interface", "lab", "--host", "203.0.113.10", "--port", "0" }));
                     Reject(() => Options.Parse(new[] { "--interface", "lab", "--interface", "lab" }));
+                });
+                Test("automatic selection matches the server IP regardless of VPN name", () => {
+                    var target = IPAddress.Parse("203.0.113.10");
+                    var connections = new[] {
+                        new ConnectedVpn { Name = "Office", ServerAddress = IPAddress.Parse("203.0.113.20") },
+                        new ConnectedVpn { Name = "My renamed VPN", ServerAddress = target }
+                    };
+                    Assert(RasDiscovery.Match(connections, target) == "My renamed VPN", "Selected the wrong VPN.");
+                    connections[1].Name = "Another name with spaces";
+                    Assert(RasDiscovery.Match(connections, target) == connections[1].Name, "VPN rename was not discovered.");
+                    Reject(() => RasDiscovery.Match(connections, IPAddress.Parse("203.0.113.30")));
+                    Reject(() => RasDiscovery.Match(new ConnectedVpn[0], target));
+                    Reject(() => RasDiscovery.Match(new[] { connections[1], new ConnectedVpn { Name = "Duplicate endpoint", ServerAddress = target } }, target));
+                });
+                Test("Windows RAS interop can enumerate active connections", () => {
+                    Assert(RasDiscovery.Enumerate() != null, "RAS enumeration failed.");
                 });
                 Test("VPN missing or down never selects Ethernet", () => {
                     Reject(() => Vpn.Select(new Adapter[0], "Lab VPN"));

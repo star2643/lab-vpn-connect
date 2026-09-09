@@ -60,7 +60,8 @@ namespace LabVpnConnect
                     else o.TimeoutSeconds = number;
                 }
             }
-            if (string.IsNullOrWhiteSpace(o.InterfaceName)) throw new ArgumentException("--interface is required.");
+            if (seen.Contains("--interface") && string.IsNullOrWhiteSpace(o.InterfaceName))
+                throw new ArgumentException("--interface must not be empty.");
             if (o.Host == null) throw new ArgumentException("--host is required (IPv4 address).");
             if (o.Port < 1 || o.Port > 65535) throw new ArgumentException("--port must be 1-65535.");
             if (o.TimeoutSeconds < 1 || o.TimeoutSeconds > 120) throw new ArgumentException("--timeout must be 1-120 seconds.");
@@ -208,13 +209,14 @@ namespace LabVpnConnect
 
     internal static class Program
     {
-        internal const string Version = "1.0.1";
+        internal const string Version = "1.1.0";
         private static int Main(string[] args)
         {
             if (args.Length == 1 && args[0] == "--version") { Console.WriteLine("lab-vpn-connect " + Version); return 0; }
             if (args.Length == 0 || (args.Length == 1 && args[0] == "--help"))
             {
-                Console.WriteLine("lab-vpn-connect --interface NAME --host IPv4 --port PORT [--timeout SECONDS] [--check] [--verbose]");
+                Console.WriteLine("lab-vpn-connect --host IPv4 --port PORT [--interface NAME] [--timeout SECONDS] [--check] [--verbose]");
+                Console.WriteLine("By default, finds the connected Windows VPN whose server IPv4 equals --host.");
                 Console.WriteLine("For SSH ProxyCommand on Windows PPP/Tunnel VPN adapters. Diagnostics go to stderr.");
                 return args.Length == 0 ? 2 : 0;
             }
@@ -222,7 +224,11 @@ namespace LabVpnConnect
             Adapter selected;
             try { options = Options.Parse(args); }
             catch (Exception e) { Console.Error.WriteLine("lab-vpn-connect: " + e.Message); return 2; }
-            try { selected = Vpn.Select(Vpn.Enumerate(), options.InterfaceName); }
+            try
+            {
+                string name = options.InterfaceName ?? RasDiscovery.Match(RasDiscovery.Enumerate(), options.Host);
+                selected = Vpn.Select(Vpn.Enumerate(), name);
+            }
             catch (Exception e) { Console.Error.WriteLine("lab-vpn-connect: " + e.Message); return 3; }
             try
             {
