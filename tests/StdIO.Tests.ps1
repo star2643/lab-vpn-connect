@@ -8,7 +8,15 @@ $start.CreateNoWindow = $true
 $start.RedirectStandardInput = $true
 $start.RedirectStandardOutput = $true
 $start.RedirectStandardError = $true
-$process = [Diagnostics.Process]::Start($start)
+# .NET Framework's redirected StreamWriter uses Console.InputEncoding and
+# AutoFlush. A UTF-8 BOM can be written by Process.Start before our raw payload.
+# Use an explicitly BOM-free encoding when creating this binary test pipe.
+$previousEncoding = [Console]::InputEncoding
+try {
+    [Console]::InputEncoding = New-Object Text.UTF8Encoding($false)
+    $process = [Diagnostics.Process]::Start($start)
+}
+finally { [Console]::InputEncoding = $previousEncoding }
 $output = New-Object IO.MemoryStream
 $download = $process.StandardOutput.BaseStream.CopyToAsync($output)
 $errors = $process.StandardError.ReadToEndAsync()
