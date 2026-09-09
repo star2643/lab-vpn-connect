@@ -15,12 +15,14 @@ $errors = $process.StandardError.ReadToEndAsync()
 $payload = New-Object byte[] (1024 * 1024)
 (New-Object Random(17)).NextBytes($payload)
 $process.StandardInput.BaseStream.Write($payload, 0, $payload.Length)
-$process.StandardInput.Close()
+# Close the raw pipe, not StreamWriter: disposing StreamWriter can append its
+# encoding preamble on machines whose default encoding is UTF-8 (e.g. CI).
+$process.StandardInput.BaseStream.Close()
 if (-not $process.WaitForExit(10000)) { $process.Kill(); throw 'Binary stdio echo stalled.' }
 [void]$download.GetAwaiter().GetResult()
 if ($process.ExitCode -ne 0) { throw ('Binary stdio failed: ' + $errors.Result) }
 $actual = $output.ToArray()
-if ($actual.Length -ne $payload.Length) { throw 'Binary stdio changed the data length.' }
+if ($actual.Length -ne $payload.Length) { throw ('Binary stdio length: expected ' + $payload.Length + ', got ' + $actual.Length) }
 $sha = [Security.Cryptography.SHA256]::Create()
 if ([Convert]::ToBase64String($sha.ComputeHash($payload)) -ne [Convert]::ToBase64String($sha.ComputeHash($actual))) {
     throw 'Binary stdio changed the payload.'
