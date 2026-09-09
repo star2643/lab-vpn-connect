@@ -11,7 +11,7 @@ $first = [IO.File]::ReadAllText($config)
 & (Join-Path $project 'install.ps1') @parameters
 if ([IO.File]::ReadAllText($config) -cne $first) { throw 'Installer is not idempotent.' }
 if (-not $first.EndsWith($original)) { throw 'Original user configuration changed.' }
-$effective = & ssh.exe -G -F $config work 2>&1
+$effective = & ssh.exe -G -T -F $config work 2>&1
 if ($LASTEXITCODE -ne 0 -or -not ($effective -match '^hostname 203\.0\.113\.10$')) { throw 'SSH could not parse the installed configuration.' }
 & (Join-Path $project 'uninstall.ps1') -Alias work -ConfigPath $config
 if ([IO.File]::ReadAllText($config) -cne $original) { throw 'Uninstall did not restore the original config.' }
