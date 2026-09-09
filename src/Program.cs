@@ -209,7 +209,7 @@ namespace LabVpnConnect
 
     internal static class Program
     {
-        internal const string Version = "1.1.0";
+        internal const string Version = "1.1.1";
         private static int Main(string[] args)
         {
             if (args.Length == 1 && args[0] == "--version") { Console.WriteLine("lab-vpn-connect " + Version); return 0; }

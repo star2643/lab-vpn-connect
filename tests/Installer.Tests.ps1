@@ -21,7 +21,23 @@ if ($automatic -match '--interface' -or $automatic -notmatch '--host %h --port %
 if (-not $automatic.EndsWith($original)) { throw 'Upgrade changed the original user configuration.' }
 & (Join-Path $project 'install.ps1') @parameters
 if ([IO.File]::ReadAllText($config) -cne $automatic) { throw 'Automatic-mode installation is not idempotent.' }
+$parameters.Remove('Port')
+function Read-Host { param([string]$Prompt) return '10192' }
+& (Join-Path $project 'install.ps1') @parameters
+$effective = & ssh.exe -G -T -F $config work 2>&1
+if ($LASTEXITCODE -ne 0 -or -not ($effective -match '^port 10192$')) { throw 'Interactive port did not reach SSH.' }
+$beforeInvalid = [IO.File]::ReadAllText($config)
+foreach ($invalidPort in @('abc', '0', '65536')) {
+    function Read-Host { param([string]$Prompt) return $invalidPort }
+    $rejected = $false
+    try { & (Join-Path $project 'install.ps1') @parameters } catch { $rejected = $true }
+    if (-not $rejected -or [IO.File]::ReadAllText($config) -cne $beforeInvalid) { throw 'Invalid port must be rejected without changing config.' }
+}
+function Read-Host { param([string]$Prompt) return '' }
+& (Join-Path $project 'install.ps1') @parameters
+$effective = & ssh.exe -G -T -F $config work 2>&1
+if ($LASTEXITCODE -ne 0 -or -not ($effective -match '^port 10137$')) { throw 'Blank port did not use the displayed default.' }
 & (Join-Path $project 'uninstall.ps1') -Alias work -ConfigPath $config
 if ([IO.File]::ReadAllText($config) -cne $original) { throw 'Uninstall did not restore the original config.' }
-Write-Host 'PASS installer: spaced paths, explicit/automatic modes, upgrade, repeat install, SSH parsing, preservation, uninstall'
+Write-Host 'PASS installer: interactive/default/invalid ports, spaced paths, explicit/automatic modes, upgrade, repeat install, SSH parsing, preservation, uninstall'
 Write-Host ('Test artifacts: ' + $testRoot)

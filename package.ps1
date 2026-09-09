@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$Version = '1.1.0')
+param([string]$Version = '1.1.1')
 $ErrorActionPreference = 'Stop'
 if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid version.' }
 & (Join-Path $PSScriptRoot 'build.ps1')

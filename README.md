@@ -6,7 +6,7 @@ Windows SSH 的 VPN 連線小工具。依目標 IP 自動找到對應的已連�
 
 ## 下載與安裝
 
-從 [Releases](https://github.com/star2643/lab-vpn-connect/releases) 下載 Windows ZIP，完整解壓縮，執行 `Install.cmd`，輸入管理員提供的公網 IPv4 和自己的 SSH 帳號。預設 SSH 別名為 `work`、port 為 `10137`。VPN 名稱可以自行取，不需要輸入。
+從 [Releases](https://github.com/star2643/lab-vpn-connect/releases) 下載 Windows ZIP，完整解壓縮，執行 `Install.cmd`，依序輸入管理員提供的公網 IPv4、目標 SSH port、自己的 SSH 帳號。port 可填 `1–65535`，直接按 Enter 使用 `10137`。預設 SSH 別名為 `work`。VPN 名稱可以自行取，不需要輸入。
 
 需要自訂時，在解壓縮的資料夾中執行：
 
@@ -39,6 +39,8 @@ Host work
 ```
 
 如需另一台 SSH 主機，新增另一個 `Host`、改 `Port` / `User`，沿用同一行 `ProxyCommand`。也可以重新執行安裝程式並給不同的 `-Alias`。
+
+`%p` 會自動使用該 Host 的 `Port`，工具並未鎖定 `10137`；TCP port 必須已有正確的 SSH 服務或轉發。這不代表任意 port 自動開放，也不是 UDP 或全系統流量代理。
 
 這是指定 SSH 連線的工具，不會攔截全電腦流量。直接執行 `ssh user@203.0.113.10 -p 10137` 而沒有符合的設定，並不會自動套用 `Host work`。
 

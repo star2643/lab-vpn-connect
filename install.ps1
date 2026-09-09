@@ -10,6 +10,14 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 if (-not $HostName) { $HostName = Read-Host 'Lab public IPv4 address' }
+if (-not $PSBoundParameters.ContainsKey('Port')) {
+    $portInput = Read-Host 'Target SSH port [10137]'
+    if (-not [string]::IsNullOrWhiteSpace($portInput)) {
+        if (-not [int]::TryParse($portInput.Trim(), [Globalization.NumberStyles]::None, [Globalization.CultureInfo]::InvariantCulture, [ref]$Port)) {
+            throw 'Port must be a whole number from 1 to 65535.'
+        }
+    }
+}
 if (-not $UserName) { $UserName = Read-Host 'Your SSH account on the target computer (not a password)' }
 if ($Alias -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$') { throw 'Invalid SSH alias.' }
 if ($UserName -notmatch '^[A-Za-z0-9_][A-Za-z0-9._-]*$') { throw 'Invalid SSH account name.' }
